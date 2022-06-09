@@ -336,7 +336,7 @@ class _DraggableMemeTextState extends State<DraggableMemeText> {
     left = widget.memeTextWithOffset.offset?.dx ??
         widget.parentConstraints.maxWidth / 3;
     if (widget.memeTextWithOffset.offset == null) {
-      WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
         final bloc = Provider.of<CreateMemeBloc>(context, listen: false);
         bloc.changeMemeTextOffset(
           widget.memeTextWithOffset.id,
