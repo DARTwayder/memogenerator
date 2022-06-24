@@ -54,14 +54,14 @@ class CreateMemeBloc {
     final Color color,
     final double fontSize,
   ) {
-    print("aaaaa");
+
     final copiedList = [...memeTextsSubject.value];
     final index = copiedList.indexWhere((memeText) => memeText.id == textId);
     if (index == -1) {
       return;
 
     }
-    print("bbbbbb");
+
 
     final oldMemeText = copiedList[index];
     copiedList.removeAt(index);
@@ -141,8 +141,8 @@ class CreateMemeBloc {
         id: memeText.id,
         text: memeText.text,
         position: position,
-        fontSize: memeText.fontSize,
         color: memeText.color,
+        fontSize: memeText.fontSize,
       );
     }).toList();
 

@@ -10,8 +10,8 @@ class MemeText extends Equatable {
 
   final String id;
   final String text;
-  final double fontSize;
   final Color color;
+  final double fontSize;
 
   MemeText({
     required this.id,
