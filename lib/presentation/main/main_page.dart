@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:memogenerator/data/models/meme.dart';
 import 'package:memogenerator/presentation/create_meme/create_meme_page.dart';
+import 'package:memogenerator/presentation/main/memes_with_docs_path.dart';
 import 'package:memogenerator/resources/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -82,35 +85,63 @@ class _MainPageContentState extends State<MainPageContent> {
   @override
   Widget build(BuildContext context) {
     final bloc = Provider.of<MainBloc>(context, listen: false);
-    return StreamBuilder<List<Meme>>(
-      stream: bloc.observeMems(),
-      initialData: <Meme>[],
+    return StreamBuilder<MemeWithDocsPath>(
+      stream: bloc.observeMemesWithDocsPath(),
       builder: (context, snapshot) {
-        final items = snapshot.hasData ? snapshot.data! : const <Meme>[];
-        return ListView(
+        if (!snapshot.hasData) {
+          return SizedBox.shrink();
+        }
+        final items = snapshot.requireData.memes;
+        final docsPath = snapshot.requireData.docsPath;
+        return GridView.extent(
+          maxCrossAxisExtent: 180,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           children: items.map(
             (item) {
-              return GestureDetector(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) {
-                        return CreateMemePage(id: item.id);
-                      },
-                    ),
-                  );
-                },
-                child: Container(
-                  height: 48,
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  alignment: Alignment.centerLeft,
-                  child: Text(item.id),
-                ),
-              );
+              return GridItem(meme: item, docsPath: docsPath);
             },
           ).toList(),
         );
       },
+    );
+  }
+}
+
+class GridItem extends StatelessWidget {
+  const GridItem({
+    Key? key,
+    required this.meme,
+    required this.docsPath,
+  }) : super(key: key);
+
+  final Meme meme;
+  final String docsPath;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageFile = File("$docsPath${Platform.pathSeparator}${meme.id}.png");
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) {
+              return CreateMemePage(id: meme.id);
+            },
+          ),
+        );
+      },
+      child: Container(
+        alignment: Alignment.centerLeft,
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.darkGrey, width: 1),
+        ),
+        child: imageFile.existsSync()
+            ? Image.file(
+                File("$docsPath${Platform.pathSeparator}${meme.id}.png"))
+            : Text(meme.id),
+      ),
     );
   }
 }

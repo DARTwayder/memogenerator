@@ -42,10 +42,36 @@ class CreateMemeBloc {
 
   CreateMemeBloc({final String? id, final String? selectedMemePath})
       : this.id = id ?? Uuid().v4() {
-    print("Got id: $id");
     memePathSubject.add(selectedMemePath);
     _subscribeToNewMemTextOffset();
     _subscribeToExistentMeme();
+  }
+
+
+  //Сохраняем измененные настройки шрифта
+  void changeFontSettings(
+    final String textId,
+    final Color color,
+    final double fontSize,
+  ) {
+    print("aaaaa");
+    final copiedList = [...memeTextsSubject.value];
+    final index = copiedList.indexWhere((memeText) => memeText.id == textId);
+    if (index == -1) {
+      return;
+
+    }
+    print("bbbbbb");
+
+    final oldMemeText = copiedList[index];
+    copiedList.removeAt(index);
+    copiedList.insert(
+      index,
+      oldMemeText.copyWithChangedFontSettings(color,fontSize),
+    );
+    print("New font settings applied:$copiedList");
+    memeTextsSubject.add(copiedList);
+
   }
 
   void _subscribeToExistentMeme() {
@@ -55,9 +81,9 @@ class CreateMemeBloc {
         if (meme == null) {
           return;
         }
-        print("Got meme in constructor: $meme");
+
         final memeTexts = meme.texts.map((textWithPosition) {
-          return MemeText(id: textWithPosition.id, text: textWithPosition.text);
+          return MemeText.createFromTextWithPosition(textWithPosition);
         }).toList();
         final memeTextOffsets = meme.texts.map((textWithPosition) {
           return MemeTextOffset(
@@ -88,17 +114,15 @@ class CreateMemeBloc {
   }
 
   void shareMeme() {
-
     shareMemeSubscription?.cancel();
     shareMemeSubscription = ScreenshotInteractor.getInstance()
         .shareScreenshot(screenshotControllerSubject.value)
         .asStream()
-        .listen((event) {
-
-    },
-      onError: (error, stackTrace) =>
-          print("Error in shareMemeSubscription:$error,$stackTrace"),
-    );
+        .listen(
+          (event) {},
+          onError: (error, stackTrace) =>
+              print("Error in shareMemeSubscription:$error,$stackTrace"),
+        );
   }
 
   void saveMeme() {
@@ -114,13 +138,19 @@ class CreateMemeBloc {
         left: memeTextPosition?.offset.dx ?? 0,
       );
       return TextWithPosition(
-          id: memeText.id, text: memeText.text, position: position);
+        id: memeText.id,
+        text: memeText.text,
+        position: position,
+        fontSize: memeText.fontSize,
+        color: memeText.color,
+      );
     }).toList();
 
     saveMemeSubscription = SaveMemeInteractor.getInstance()
         .saveMeme(
             id: id,
             textWithPositions: textsWithPositions,
+            screenshotController: screenshotControllerSubject.value,
             imagePath: memePathSubject.value)
         .asStream()
         .listen((saved) {
@@ -172,8 +202,12 @@ class CreateMemeBloc {
     if (index == -1) {
       return;
     }
+    final oldMemeText = copiedList[index];
     copiedList.removeAt(index);
-    copiedList.insert(index, MemeText(id: id, text: text));
+    copiedList.insert(
+      index,
+      oldMemeText.copyWithChangedText(text),
+    );
     memeTextsSubject.add(copiedList);
   }
 
@@ -205,8 +239,8 @@ class CreateMemeBloc {
           return element.id == memeText.id;
         });
         return MemeTextWithOffset(
-          id: memeText.id,
-          text: memeText.text,
+          memeText: memeText,
+
           offset: memeTextOffset?.offset,
         );
       }).toList();
