@@ -47,31 +47,26 @@ class CreateMemeBloc {
     _subscribeToExistentMeme();
   }
 
-
   //Сохраняем измененные настройки шрифта
+  //вставляем не по индексу,а удаляем и вставляем элемент в коллекции
   void changeFontSettings(
     final String textId,
     final Color color,
     final double fontSize,
   ) {
-
     final copiedList = [...memeTextsSubject.value];
-    final index = copiedList.indexWhere((memeText) => memeText.id == textId);
-    if (index == -1) {
+    final oldMemeText = copiedList.firstWhereOrNull(
+      (memeText) => memeText.id == textId,
+    );
+    if (oldMemeText == null) {
       return;
-
     }
-
-
-    final oldMemeText = copiedList[index];
-    copiedList.removeAt(index);
-    copiedList.insert(
-      index,
-      oldMemeText.copyWithChangedFontSettings(color,fontSize),
+    copiedList.remove(oldMemeText);
+    copiedList.add(
+      oldMemeText.copyWithChangedFontSettings(color, fontSize),
     );
     print("New font settings applied:$copiedList");
     memeTextsSubject.add(copiedList);
-
   }
 
   void _subscribeToExistentMeme() {
@@ -240,7 +235,6 @@ class CreateMemeBloc {
         });
         return MemeTextWithOffset(
           memeText: memeText,
-
           offset: memeTextOffset?.offset,
         );
       }).toList();
