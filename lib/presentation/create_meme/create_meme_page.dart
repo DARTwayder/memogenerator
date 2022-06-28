@@ -44,6 +44,10 @@ class _CreateMemePageState extends State<CreateMemePage> {
       value: bloc,
       child: WillPopScope(
         onWillPop: () async {
+          final allSaved = await bloc.isAllSaved();
+          if (allSaved) {
+            return true;
+          }
           final goBack = await showConfirmationDialog(context);
           return goBack ?? false;
         },
@@ -60,7 +64,7 @@ class _CreateMemePageState extends State<CreateMemePage> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Icon(
-                    Icons.screenshot,
+                    Icons.share,
                     color: AppColors.darkGrey,
                   ),
                 ),
@@ -98,14 +102,13 @@ class _CreateMemePageState extends State<CreateMemePage> {
       builder: (context) {
         return AlertDialog(
           title: Text("Хотите выйти?"),
-         actionsPadding:EdgeInsets.symmetric(horizontal: 16) ,
+          actionsPadding: EdgeInsets.symmetric(horizontal: 16),
           content: Text("Вы потеряете нехохраненные изменения"),
           actions: [
             AppButton(
               onTap: () => Navigator.of(context).pop(false),
               text: "Отмена",
               color: AppColors.darkGrey,
-
             ),
             AppButton(
               onTap: () => Navigator.of(context).pop(true),
@@ -308,26 +311,60 @@ class BottomMemeText extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            GestureDetector(
+            BottomMemeTextAction(
+              icon: Icons.font_download_outlined,
               onTap: () {
                 showModalBottomSheet(
                   context: context,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
+                  ),
                   builder: (context) {
                     // прокидываем блок,через Provider внутрь этого Sheet'а
                     return Provider.value(
-                        value: bloc,
-                        child: FontSettingBottomSheet(memeText: item.memeText));
+                      value: bloc,
+                      child: FontSettingBottomSheet(memeText: item.memeText),
+                    );
                   },
                 );
               },
-              child: Padding(
-                padding: EdgeInsets.all(8),
-                child: Icon(Icons.font_download_outlined),
-              ),
+            ),
+            const SizedBox(width: 4),
+            BottomMemeTextAction(
+              icon: Icons.delete_forever_outlined,
+              onTap: () {
+                bloc.deleteMemeText(item.memeText.id);
+              },
             ),
             const SizedBox(width: 4),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class BottomMemeTextAction extends StatelessWidget {
+  const BottomMemeTextAction({
+    Key? key,
+    required this.onTap,
+    required this.icon,
+  }) : super(key: key);
+
+  final VoidCallback onTap;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final bloc = Provider.of<CreateMemeBloc>(context, listen: false);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.all(8),
+        child: Icon(icon),
       ),
     );
   }
@@ -494,6 +531,7 @@ class _DraggableMemeTextState extends State<DraggableMemeText> {
                 text: widget.memeTextWithOffset.memeText.text,
                 fontSize: widget.memeTextWithOffset.memeText.fontSize,
                 color: widget.memeTextWithOffset.memeText.color,
+                fontWeight: widget.memeTextWithOffset.memeText.fontWeight,
               );
             }),
       ),

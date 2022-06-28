@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:memogenerator/data/models/position.dart';
 import 'package:memogenerator/data/models/text_with_position.dart';
@@ -40,8 +41,10 @@ class CreateMemeBloc {
 
   final String id;
 
-  CreateMemeBloc({final String? id, final String? selectedMemePath})
-      : this.id = id ?? Uuid().v4() {
+  CreateMemeBloc({
+    final String? id,
+    final String? selectedMemePath,
+  }) : this.id = id ?? Uuid().v4() {
     memePathSubject.add(selectedMemePath);
     _subscribeToNewMemTextOffset();
     _subscribeToExistentMeme();
@@ -53,6 +56,7 @@ class CreateMemeBloc {
     final String textId,
     final Color color,
     final double fontSize,
+    final FontWeight fontWeight,
   ) {
     final copiedList = [...memeTextsSubject.value];
     final oldMemeText = copiedList.firstWhereOrNull(
@@ -63,10 +67,35 @@ class CreateMemeBloc {
     }
     copiedList.remove(oldMemeText);
     copiedList.add(
-      oldMemeText.copyWithChangedFontSettings(color, fontSize),
+      oldMemeText.copyWithChangedFontSettings(color, fontSize, fontWeight),
     );
     print("New font settings applied:$copiedList");
     memeTextsSubject.add(copiedList);
+  }
+
+  Future<bool> isAllSaved() async {
+    final savedMeme = await MemesRepository.getInstance().getMeme(id);
+    if (savedMeme == null) {
+      return false;
+    }
+    final savedMemeTexts = savedMeme.texts.map((textWithPosition) {
+      return MemeText.createFromTextWithPosition(textWithPosition);
+    }).toList();
+    final savedMemeTextOffsets = savedMeme.texts.map((textWithPosition) {
+      return MemeTextOffset(
+        id: textWithPosition.id,
+        offset: Offset(
+          textWithPosition.position.left,
+          textWithPosition.position.top,
+        ),
+      );
+    }).toList();
+    return DeepCollectionEquality.unordered()
+            .equals(savedMemeTexts, memeTextsSubject.value) &&
+        DeepCollectionEquality.unordered().equals(
+          savedMemeTextOffsets,
+          memeTextOffsetsSubject.value,
+        );
   }
 
   void _subscribeToExistentMeme() {
@@ -120,6 +149,12 @@ class CreateMemeBloc {
         );
   }
 
+  void deleteMemeText(final String textId) {
+    final updatedMemeTexts = [...memeTextsSubject.value];
+    updatedMemeTexts.removeWhere((memeText) => memeText.id == textId);
+    memeTextsSubject.add(updatedMemeTexts);
+  }
+
   void saveMeme() {
     final memeTexts = memeTextsSubject.value;
     final memeTextOffsets = memeTextOffsetsSubject.value;
@@ -138,6 +173,7 @@ class CreateMemeBloc {
         position: position,
         color: memeText.color,
         fontSize: memeText.fontSize,
+        fontWeight: memeText.fontWeight,
       );
     }).toList();
 

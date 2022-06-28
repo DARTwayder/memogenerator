@@ -18,10 +18,8 @@ class AppButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-
       behavior: HitTestBehavior.opaque,
-      onTap: () => onTap,
-
+      onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         child: Row(
