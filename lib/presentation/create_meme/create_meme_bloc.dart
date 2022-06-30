@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:memogenerator/data/models/position.dart';
 import 'package:memogenerator/data/models/text_with_position.dart';
@@ -73,6 +72,7 @@ class CreateMemeBloc {
     memeTextsSubject.add(copiedList);
   }
 
+  //показывать диалог если что то изменено
   Future<bool> isAllSaved() async {
     final savedMeme = await MemesRepository.getInstance().getMeme(id);
     if (savedMeme == null) {
@@ -302,6 +302,7 @@ class CreateMemeBloc {
     memeTextsSubject.close();
     selectedMemeTextSubject.close();
     memeTextOffsetsSubject.close();
+    newMemeTextOffsetSubject.close();
     memePathSubject.close();
     screenshotControllerSubject.close();
 
@@ -311,3 +312,4 @@ class CreateMemeBloc {
     shareMemeSubscription?.cancel();
   }
 }
+

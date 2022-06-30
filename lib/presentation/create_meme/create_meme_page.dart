@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:memogenerator/presentation/create_meme/create_meme_bloc.dart';
 import 'package:memogenerator/presentation/create_meme/font_settings_bottom_sheet.dart';
@@ -11,6 +10,8 @@ import 'package:memogenerator/presentation/widgets/app_button.dart';
 import 'package:memogenerator/resources/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:screenshot/screenshot.dart';
+
+
 
 class CreateMemePage extends StatefulWidget {
   final String? id;
@@ -59,26 +60,9 @@ class _CreateMemePageState extends State<CreateMemePage> {
             title: Text("Создаем мем"),
             bottom: EditTextBar(),
             actions: [
-              GestureDetector(
-                onTap: () => bloc.shareMeme(),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Icon(
-                    Icons.share,
-                    color: AppColors.darkGrey,
-                  ),
-                ),
-              ),
-              GestureDetector(
-                onTap: () => bloc.saveMeme(),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Icon(
-                    Icons.save,
-                    color: AppColors.darkGrey,
-                  ),
-                ),
-              ),
+              AnimatedIconButton(
+                  onTap: () => bloc.shareMeme(), icon: Icons.share),
+              AnimatedIconButton(onTap: () => bloc.saveMeme(), icon: Icons.save)
             ],
           ),
           backgroundColor: Colors.white,
@@ -117,6 +101,75 @@ class _CreateMemePageState extends State<CreateMemePage> {
           ],
         );
       },
+    );
+  }
+}
+
+class AnimatedIconButton extends StatefulWidget {
+  final VoidCallback onTap;
+  final IconData icon;
+
+  const AnimatedIconButton({
+    Key? key,
+    required this.onTap,
+    required this.icon,
+  }) : super(key: key);
+
+  @override
+  State<AnimatedIconButton> createState() => _AnimatedIconButtonState();
+}
+
+class _AnimatedIconButtonState extends State<AnimatedIconButton> {
+  double scale = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        setState(() => scale = 1.5);
+        widget.onTap();
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: AnimatedScale(
+          duration: Duration(milliseconds: 300),
+          scale: scale,
+          curve: Curves.bounceInOut,
+          child: Icon(widget.icon, color: AppColors.darkGrey, size: 24),
+          onEnd: () => setState(() => scale = 1.0),
+        ),
+      ),
+    );
+  }
+}
+
+class SaveButton extends StatefulWidget {
+  const SaveButton({Key? key}) : super(key: key);
+
+  @override
+  State<SaveButton> createState() => _SaveButtonState();
+}
+
+class _SaveButtonState extends State<SaveButton> {
+  double scale = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final bloc = Provider.of<CreateMemeBloc>(context, listen: false);
+    return GestureDetector(
+      onTap: () {
+        setState(() => scale = 1.5);
+        bloc.saveMeme();
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: AnimatedScale(
+          scale: scale,
+          duration: Duration(microseconds: 500),
+          child: Icon(Icons.save, color: AppColors.darkGrey, size: 24),
+          onEnd: () => setState(() => scale = 1.0),
+        ),
+      ),
     );
   }
 }
@@ -358,8 +411,6 @@ class BottomMemeTextAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bloc = Provider.of<CreateMemeBloc>(context, listen: false);
-
     return GestureDetector(
       onTap: onTap,
       child: Padding(
