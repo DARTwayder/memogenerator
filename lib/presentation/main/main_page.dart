@@ -19,13 +19,21 @@ class MainPage extends StatefulWidget {
   _MainPageState createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage> {
+class _MainPageState extends State<MainPage>
+    with SingleTickerProviderStateMixin {
   late final MainBloc bloc;
+  late TabController tabController;
+
+  double tabIndex = 0;
 
   @override
   void initState() {
     super.initState();
     bloc = MainBloc();
+    tabController = TabController(length: 2, vsync: this);
+    tabController.animation!.addListener(() {
+      setState(() => tabIndex = tabController.animation!.value);
+    });
   }
 
   @override
@@ -37,44 +45,49 @@ class _MainPageState extends State<MainPage> {
           final goBack = await showConfirmationExitDialog(context);
           return goBack ?? false;
         },
-        child: DefaultTabController(
-          length: 2,
-          child: Scaffold(
-            appBar: AppBar(
-              centerTitle: true,
-              backgroundColor: AppColors.lemon,
-              foregroundColor: AppColors.darkGrey,
-              title: GestureDetector(
-                onLongPress: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => EasterEggPage(),
-                    ),
-                  );
-                },
-                child: Text(
-                  "Мемогенератор",
-                  style: GoogleFonts.seymourOne(fontSize: 24),
-                ),
-              ),
-              bottom: TabBar(
-                labelColor: AppColors.darkGrey,
-                indicatorColor: AppColors.fuchsia,
-                indicatorWeight: 3,
-                tabs: [
-                  Tab(text: "Созданные".toUpperCase()),
-                  Tab(text: "Шаблоны".toUpperCase()),
-                ],
+        child: Scaffold(
+          appBar: AppBar(
+            centerTitle: true,
+            backgroundColor: AppColors.lemon,
+            foregroundColor: AppColors.darkGrey,
+            title: GestureDetector(
+              onLongPress: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => EasterEggPage(),
+                  ),
+                );
+              },
+              child: Text(
+                "Мемогенератор",
+                style: GoogleFonts.seymourOne(fontSize: 24),
               ),
             ),
-            floatingActionButton: CreateMemeFab(),
-            backgroundColor: Colors.white,
-            body: TabBarView(
-              children: [
-                SafeArea(child: CreateMemeGrid()),
-                SafeArea(child: TemplatesGrid()),
+            bottom: TabBar(
+              controller: tabController,
+              labelColor: AppColors.darkGrey,
+              indicatorColor: AppColors.fuchsia,
+              indicatorWeight: 3,
+              tabs: [
+                Tab(text: "Созданные".toUpperCase()),
+                Tab(text: "Шаблоны".toUpperCase()),
               ],
             ),
+          ),
+          floatingActionButton: tabIndex <= 0.5
+              ? Transform.scale(
+                  scale: 1 - tabIndex / 0.5,
+                  child: CreateMemFab(),
+                )
+              : Transform.scale(
+                  scale: (tabIndex - 0.5) / 0.5, child: CreateTemplateFab()),
+          backgroundColor: Colors.white,
+          body: TabBarView(
+            controller: tabController,
+            children: [
+              SafeArea(child: CreateMemeGrid()),
+              SafeArea(child: TemplatesGrid()),
+            ],
           ),
         ),
       ),
@@ -112,8 +125,8 @@ class _MainPageState extends State<MainPage> {
   }
 }
 
-class CreateMemeFab extends StatelessWidget {
-  const CreateMemeFab({Key? key}) : super(key: key);
+class CreateMemFab extends StatelessWidget {
+  const CreateMemFab({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -137,7 +150,24 @@ class CreateMemeFab extends StatelessWidget {
         Icons.add,
         color: Colors.white,
       ),
-      label: Text("Создать"),
+      label: Text("Мем"),
+    );
+  }
+}
+
+class CreateTemplateFab extends StatelessWidget {
+  const CreateTemplateFab({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final bloc = Provider.of<MainBloc>(context, listen: false);
+    return FloatingActionButton.extended(
+      onPressed: () async {
+        await bloc.selectMeme();
+      },
+      backgroundColor: AppColors.fuchsia,
+      icon: Icon(Icons.add, color: Colors.white),
+      label: Text("Шаблон"),
     );
   }
 }
@@ -181,7 +211,10 @@ class MemeGridItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bloc = Provider.of<MainBloc>(context, listen: false);
+
     final imageFile = File("$docsPath${Platform.pathSeparator}${meme.id}.png");
+
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
@@ -192,16 +225,87 @@ class MemeGridItem extends StatelessWidget {
           ),
         );
       },
-      child: Container(
-        alignment: Alignment.centerLeft,
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.darkGrey, width: 1),
-        ),
-        child: imageFile.existsSync()
-            ? Image.file(
-                File("$docsPath${Platform.pathSeparator}${meme.id}.png"))
-            : Text(meme.id),
+      child: Stack(
+        children: [
+          Container(
+            alignment: Alignment.centerLeft,
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.darkGrey, width: 1),
+            ),
+            child: imageFile.existsSync()
+                ? Image.file(
+                    File("$docsPath${Platform.pathSeparator}${meme.id}.png"))
+                : Text(meme.id),
+          ),
+          Positioned(
+            bottom: 4,
+            right: 4,
+            child: DeleteButton(
+              onDeleteAction: () => bloc.deleteMeme(meme.id),
+              itemName: "мем",
+            ),
+          )
+        ],
       ),
+    );
+  }
+}
+
+class DeleteButton extends StatelessWidget {
+  final String itemName;
+  final VoidCallback onDeleteAction;
+
+  const DeleteButton({
+    Key? key,
+    required this.onDeleteAction,
+    required this.itemName,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        final delete = await showConfirmationDeleteDialog(context) ?? false;
+        if (delete) {
+          onDeleteAction();
+        }
+      },
+      child: Container(
+        padding: EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.darkGrey38,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          Icons.delete_outline,
+          size: 24,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Future<bool?> showConfirmationDeleteDialog(BuildContext context) {
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Удалить $itemName?"),
+          actionsPadding: EdgeInsets.symmetric(horizontal: 16),
+          content: Text("Выбранный $itemName будет удален навсегда"),
+          actions: [
+            AppButton(
+              onTap: () => Navigator.of(context).pop(false),
+              text: "Отмена",
+              color: AppColors.darkGrey,
+            ),
+            AppButton(
+              onTap: () => Navigator.of(context).pop(true),
+              text: "Удалить",
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -216,8 +320,7 @@ class TemplatesGrid extends StatelessWidget {
           return SizedBox.shrink();
         }
         final templates = snapshot.requireData;
-        ;
-        return GridView.extent(
+                return GridView.extent(
           maxCrossAxisExtent: 180,
           mainAxisSpacing: 8,
           crossAxisSpacing: 8,
@@ -243,6 +346,7 @@ class TemplateGridItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bloc = Provider.of<MainBloc>(context, listen: false);
     final imageFile = File(template.fullImagePath);
     return GestureDetector(
       onTap: () {
@@ -254,13 +358,26 @@ class TemplateGridItem extends StatelessWidget {
           ),
         );
       },
-      child: Container(
-        alignment: Alignment.centerLeft,
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.darkGrey, width: 1),
-        ),
-        child:
-            imageFile.existsSync() ? Image.file(imageFile) : Text(template.id),
+      child: Stack(
+        children: [
+          Container(
+            alignment: Alignment.centerLeft,
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.darkGrey, width: 1),
+            ),
+            child: imageFile.existsSync()
+                ? Image.file(imageFile)
+                : Text(template.id),
+          ),
+          Positioned(
+            bottom: 4,
+            right: 4,
+            child: DeleteButton(
+              onDeleteAction: () => bloc.deleteTemplate(template.id),
+              itemName: "шаблон",
+            ),
+          )
+        ],
       ),
     );
   }
