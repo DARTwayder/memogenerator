@@ -7,16 +7,26 @@ import 'package:memogenerator/data/repositories/memes_repository.dart';
 import 'package:memogenerator/data/repositories/templates_repository.dart';
 import 'package:memogenerator/domain/interactors/save_template_interactor.dart';
 import 'package:memogenerator/presentation/main/memes_with_docs_path.dart';
+import 'package:memogenerator/presentation/main/models/meme_thumbnail.dart';
 import 'package:memogenerator/presentation/main/models/template_full.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
 
 class MainBloc {
-  Stream<MemeWithDocsPath> observeMemesWithDocsPath() {
-    return Rx.combineLatest2<List<Meme>, Directory, MemeWithDocsPath>(
+
+
+
+   Stream<List<MemeThumbnail>> observeMemes() {
+    return Rx.combineLatest2<List<Meme>, Directory, List<MemeThumbnail>>(
       MemesRepository.getInstance().observeMemes(),
       getApplicationDocumentsDirectory().asStream(),
-      (memes, docsDirectory) => MemeWithDocsPath(memes, docsDirectory.path),
+      (memes, docsDirectory) {
+        return memes.map((meme) {
+          final fullImageUrl =
+              "${docsDirectory.absolute.path}${Platform.pathSeparator}${meme.id}.png";
+          return MemeThumbnail(memeId: meme.id, fullImageUrl: fullImageUrl);
+        }).toList();
+      },
     );
   }
 

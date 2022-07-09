@@ -1,10 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:memogenerator/data/models/meme.dart';
 import 'package:memogenerator/presentation/create_meme/create_meme_page.dart';
 import 'package:memogenerator/presentation/easter_egg/easter_egg_page.dart';
-import 'package:memogenerator/presentation/main/memes_with_docs_path.dart';
+import 'package:memogenerator/presentation/main/models/meme_thumbnail.dart';
 import 'package:memogenerator/presentation/main/models/template_full.dart';
 import 'package:memogenerator/presentation/widgets/app_button.dart';
 import 'package:memogenerator/resources/app_colors.dart';
@@ -175,14 +174,14 @@ class CreateTemplateFab extends StatelessWidget {
 class CreateMemeGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final bloc = Provider.of<MainBloc>(context, listen: false);
-    return StreamBuilder<MemeWithDocsPath>(
-      stream: bloc.observeMemesWithDocsPath(),
+    return StreamBuilder<List<MemeThumbnail>>(
+      stream: bloc.observeMemes(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return SizedBox.shrink();
         }
-        final items = snapshot.requireData.memes;
-        final docsPath = snapshot.requireData.docsPath;
+        final items = snapshot.requireData;
+
         return GridView.extent(
           maxCrossAxisExtent: 180,
           mainAxisSpacing: 8,
@@ -190,7 +189,9 @@ class CreateMemeGrid extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           children: items.map(
             (item) {
-              return MemeGridItem(meme: item, docsPath: docsPath);
+              return MemeGridItem(
+                memeThumbnail: item,
+              );
             },
           ).toList(),
         );
@@ -202,25 +203,21 @@ class CreateMemeGrid extends StatelessWidget {
 class MemeGridItem extends StatelessWidget {
   const MemeGridItem({
     Key? key,
-    required this.meme,
-    required this.docsPath,
+    required this.memeThumbnail,
   }) : super(key: key);
 
-  final Meme meme;
-  final String docsPath;
+  final MemeThumbnail memeThumbnail;
 
   @override
   Widget build(BuildContext context) {
     final bloc = Provider.of<MainBloc>(context, listen: false);
-
-    final imageFile = File("$docsPath${Platform.pathSeparator}${meme.id}.png");
-
+    final imageFile = File(memeThumbnail.fullImageUrl);
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) {
-              return CreateMemePage(id: meme.id);
+              return CreateMemePage(id: memeThumbnail.memeId);
             },
           ),
         );
@@ -233,15 +230,14 @@ class MemeGridItem extends StatelessWidget {
               border: Border.all(color: AppColors.darkGrey, width: 1),
             ),
             child: imageFile.existsSync()
-                ? Image.file(
-                    File("$docsPath${Platform.pathSeparator}${meme.id}.png"))
-                : Text(meme.id),
+                ? Image.file(imageFile)
+                : Text(memeThumbnail.memeId),
           ),
           Positioned(
             bottom: 4,
             right: 4,
             child: DeleteButton(
-              onDeleteAction: () => bloc.deleteMeme(meme.id),
+              onDeleteAction: () => bloc.deleteMeme(memeThumbnail.memeId),
               itemName: "мем",
             ),
           )
@@ -320,7 +316,7 @@ class TemplatesGrid extends StatelessWidget {
           return SizedBox.shrink();
         }
         final templates = snapshot.requireData;
-                return GridView.extent(
+        return GridView.extent(
           maxCrossAxisExtent: 180,
           mainAxisSpacing: 8,
           crossAxisSpacing: 8,
